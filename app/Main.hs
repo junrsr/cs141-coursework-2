@@ -4,6 +4,7 @@ import Hatch
 import Hurtle.Parser
 import Hurtle.Types
 
+import Text.Megaparsec.Error (errorBundlePretty)
 import Text.Megaparsec (parse)
 import Data.Fixed (mod')
 import Data.List (foldl')
@@ -179,15 +180,22 @@ animation states t
     this is the main method of the program, which first asks the user for a file to run via the terminal and collects the user input using the getLine method. once we
     have obtained a filename, we store the contents of the hogo program using the readFile method on the file attained. Text.Megaparsec contains a method called parse,
     which runs a particular parser over a program. We can utilise this to parse the contents of the given file using the parseHogo method (defined in Parser.hs), to
-    return a list of hogo code. with this hogo code, we can then call convertProgram on it to the convert it into a list of turtle states. finally, after we have
+    return a list of hogo code. if we are unable to parse the program, we want to display an error message detailing why. Text.Megaparsec.Error contains a method called
+    errorBundlePretty, which takes in the error message we get when we are unable to parse it, and displays the error message in a visually appealing format, displaying
+    the specific error, the line in the hogo code program which this error was encountered, the character causing the issue and possible fixes in our case.
+    
+    With this hogo code, we can then call convertProgram on it to the convert it into a list of turtle states. finally, after we have
     this list of states, we can call the runAnimation method outlined in Hatch.hs. This method takes in a function which converts an integer into an image, and then
     displays the image over a given fps. our animation method earlier can be used with the list of states as a constant first parameter to generate a Int->Image method
-    which then displays each state in a particular frame for 1/fps seconds, allowing for animation
+    which then displays each state in a particular frame for 1/fps seconds, allowing for animation.
 -}
 main :: IO ()
 main = do
     putStrLn "Enter the name of the Hogo program file:" -- prints the prompt to the command line
     filename <- getLine -- gets the user input from the command line
     contents <- readFile filename -- stores the contents from the command line
-    let states = either (const []) convertProgram (parse parseHogo "" contents) -- attempts to parse the program and convert it into a list of states
-    runAnimation (animation states) -- run an animation on the list of images for each state
+    case parse parseHogo "" contents of
+        Left err -> putStrLn $ "Error parsing hogo program:\n" ++ errorBundlePretty err -- displays appropriate error message if we can't parse the program
+        Right hogocode -> do -- if we can parse the program
+            let states = convertProgram hogocode -- convert the parsed program into a list of states
+            runAnimation (animation states) -- run an animation on the list of images for each state
