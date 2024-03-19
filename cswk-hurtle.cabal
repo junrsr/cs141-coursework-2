@@ -17,16 +17,23 @@ library
   exposed-modules:
       Hurtle.Parser
       Hurtle.Types
+      Hatch
+      Images
+      Layout
+      Transforms
   other-modules:
       Paths_cswk_hurtle
   hs-source-dirs:
       src
+      src/hatch
   default-extensions:
       LambdaCase
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-orphans -Wno-missing-export-lists
   build-depends:
       base >=4.7 && <5
     , containers
+    , gloss
+    , gloss-juicy
     , megaparsec
     , parser-combinators
   default-language: GHC2021
@@ -44,6 +51,8 @@ executable cswk-hurtle
       base >=4.7 && <5
     , containers
     , cswk-hurtle
+    , gloss
+    , gloss-juicy
     , megaparsec
     , parser-combinators
   default-language: GHC2021
@@ -68,6 +77,8 @@ test-suite cswk-hurtle-test
     , cswk-hurtle
     , directory
     , filepath
+    , gloss
+    , gloss-juicy
     , megaparsec
     , parser-combinators
     , random
