@@ -26,8 +26,8 @@ png fname = fromMaybe (Gloss.text "PNG ERROR")
             $ unsafePerformIO 
             $ loadJuicyPNG fname
 
-ant :: Image
-ant = loadPNG "ant"
+turtle :: Image
+turtle = loadPNG "turtle"
 
 blank :: Image
 blank = Leaf Gloss.blank

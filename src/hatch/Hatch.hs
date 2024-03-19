@@ -20,13 +20,13 @@ import Images
 --------------------------------------------------------------------------------
 
 fps :: Int
-fps = 30
+fps = 1
 
 runAnimation :: (Int -> Image) -> IO ()
 runAnimation = animSteps fps
 
 window :: Display
-window = InWindow "CS141 Anty Programming" (1280, 960) (10, 10) --(1280, 960) 
+window = InWindow "Hurtle!" (1280, 960) (10, 10) --(1280, 960) 
 
 background :: Color
 background = makeColor 0.9 0.9 0.9 1
