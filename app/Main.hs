@@ -119,51 +119,75 @@ initialState :: TurtleState
 initialState = TurtleState { position = (0, 0), angle = 90, penDown = True, linesDrawnSoFar = [] }
 
 
--- todo here with comments
 {-|
-    The showTurtleState method is responsible for conerting the current state to a particular frame. it first takes the turtle image 
+    The showTurtleState method is responsible for converting the current state to a particular frame. it first takes the turtle image we want to display, and scales it
+    up. The image is then rotated to match with the angle provided, and then put in the appropriate coordinates, utilising the rotate, scale and offset methods in
+    Transforms.hs.
 
-    With these new Images, the superimposeAll method defined in Layout.hs can be called. This takes a list of Images and folds it all into one image, merging them using the <@> operator. Firstly, we'd need to create a single list
-    for the image showAnt and the images showBlackSquares to allow us to call this function. This can simply be done by utilising how lists are constructed in Haskell, allowing us to prepend an image to a list of images to create
-    a new list. From here, superimposeAll can be called on the new list of images to create one singular frame displaying the ant and all the black squares. This new image is what gets returned in the showAntState method.
+    The Transforms.hs method also has a method called line, which takes in 4 values (the starting x and y, and the ending x and y). As the drawnLines method defined in
+    TurtleState already contains these values, we can simply use the map function to call the function on each of those values. In this instance, I'm using a lambda
+    function as this function isn't used elsewhere, so it isn't necessary to properly define it. Map then applies this function on the list of drawnLines to generate
+    a list of images.
 
+    With all the images we want to draw for a given frame generated, we just need to combine them into one imagine. The superimposeAll method in Layout.hs can be used
+    to achieve this, as it takes in a list of images and utilises the <@> operator to fold the images into one singular image. To use this in my solution, I can add
+    the turtle image onto the end of the list of drawn lines, and then superimpose that new list. This new image generated is what is returned for the function, as it
+    corresponds to ther turtle state at that given frame.
 -}
 showTurtleState :: TurtleState -> Image
 showTurtleState TurtleState{position=(x, y), angle=currentAngle, linesDrawnSoFar=drawnLines} =
     let
         -- creates the image for the turtle and scales it up
         showTurtle :: Image
-        showTurtle = offset (round (x)) (round (y)) (rotate angle (scale 3 turtle))
-            where angle = round (90 - currentAngle `mod'` 360)
+        showTurtle = offset (round (x)) (round (y)) (rotate angle (scale 3 turtle)) -- round the numbers to the nearest integer as offset only takes integer values -> difference is small (<=0.5 units)
+            where angle = round (90 - currentAngle `mod'` 360) -- subtracting from 90 as 'north' is 90 degrees whereas the turtle by default is facing north
 
         -- creates the lines between each position the user has drawn and converts it into an image
         drawLines :: [Image]
-        drawLines = map (\((x1, y1), (x2, y2)) -> line x1 y1 x2 y2) drawnLines
+        drawLines = map (\((x1, y1), (x2, y2)) -> line x1 y1 x2 y2) drawnLines -- draws a line between each pair of coordinates in drawnLines
     
     in
-        superimposeAll (drawLines ++ [showTurtle])
+        superimposeAll (drawLines ++ [showTurtle]) -- adding showTurtle at the end instead of prepending it so that it is rendered above all lines
 
+{-|
+    @PARAM a list of hogo code we want to convert into turtle states
+    @RETURN a list of turtle states corresponding to the hogo commands
+    
+    this method takes in a list of hogocode, and converts it into a list of turtle states. scanl method is utilised to apply the update method to every single command
+    within the program to update the turtle state accordingly. the turtle state is accumulated, meaning once we generate a new turtle state, we execute the next hogo
+    command on this new state instead of repeatedly using the initial state of the turtle.
+-}
+convertProgram :: [HogoCode] -> [TurtleState]
+convertProgram program = scanl update initialState program
 
+{-|
+    @PARAM a list of turtle states we want to animate
+    @PARAM a value t which corresponds to the frame we currently want to show
+    @RETURN a frame whose image corresponds with the current turtle state (determined by index t)
 
--- Given a program, process it into a list of TurtleStates
-processProgram :: [HogoCode] -> [TurtleState]
-processProgram program = scanl update initialState program
-  -- 'scanl' applies 'update' to each command in 'program', accumulating the results.
-  -- This starts with 'initialState' and builds a list where each element is the state
-  -- after executing one more command.
-
+    this method is responsible for creating a frame for a given turtle state. it takes in a list of all turtle states, as well as the current state we are trying to
+    display. it first checks if the current frame t is less than the length of the list of states, as we only want to play the animations once. if it exceeds the 
+    current frame, we instead display the last frame consistently to denote the end of the animation. otherwise, we display the frame at the t index of the list of
+    states, attained via !!. We then use the showTurtleState metod we defined earlier to take in the give state, convert it into an image and then return that image.
+-}
 animation :: [TurtleState] -> Int -> Image
 animation states t
-    | t < length states = showTurtleState (states !! t)
-    | otherwise = showTurtleState(last states)
-  -- Using 'mod' to loop the animation if 't' exceeds the number of states.
+    | t < length states = showTurtleState (states !! t) -- show the image of the turtle state at index t
+    | otherwise = showTurtleState(last states) -- show the image of the last turtle state in the list of states
 
+{-|
+    this is the main method of the program, which first asks the user for a file to run via the terminal and collects the user input using the getLine method. once we
+    have obtained a filename, we store the contents of the hogo program using the readFile method on the file attained. Text.Megaparsec contains a method called parse,
+    which runs a particular parser over a program. We can utilise this to parse the contents of the given file using the parseHogo method (defined in Parser.hs), to
+    return a list of hogo code. with this hogo code, we can then call convertProgram on it to the convert it into a list of turtle states. finally, after we have
+    this list of states, we can call the runAnimation method outlined in Hatch.hs. This method takes in a function which converts an integer into an image, and then
+    displays the image over a given fps. our animation method earlier can be used with the list of states as a constant first parameter to generate a Int->Image method
+    which then displays each state in a particular frame for 1/fps seconds, allowing for animation
+-}
 main :: IO ()
 main = do
-    putStrLn "Enter the name of the Hogo program file:"
-    filename <- getLine
-    contents <- readFile filename
-    let states = either (const []) processProgram (parse parseHogo filename contents)
-    runAnimation (animation states)
-    -- 'processProgram' turns the list of HogoCode commands into a list of TurtleStates.
-    -- 'animation' is then adapted to work with this list of states.
+    putStrLn "Enter the name of the Hogo program file:" -- prints the prompt to the command line
+    filename <- getLine -- gets the user input from the command line
+    contents <- readFile filename -- stores the contents from the command line
+    let states = either (const []) convertProgram (parse parseHogo "" contents) -- attempts to parse the program and convert it into a list of states
+    runAnimation (animation states) -- run an animation on the list of images for each state
